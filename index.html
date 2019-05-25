@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Socket.IO chat</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <style>
+        body {
+            margin-top: 30px;
+        }
+
+        #messageArea {
+            display: none;
+        }
+
+        #roomsContainer {
+            overflow-y: auto;
+            height: 400px;
+        }
+        .rooms {
+            color:blue;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="userFormArea" class="row col-md-12">
+            <div class="col-md-12">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label>Enter Username</label>
+                        <input type="text" class="form-control" id="username" />
+                        <br />
+                        <input type="submit" class="btn btn-primary" value="Login" />
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="messageArea" class="row col-md-12">
+            <div class="col-md-3">
+                <div class="well">
+                    <h3>Online Users</h3>
+                    <ul class="list-group" id="users">
+
+                    </ul>
+                </div>
+            </div>
+
+
+            <div class="col-md-7">
+                <div class="chat" id="chat"></div>
+
+                <form id="messageForm">
+                    <div class="form-group">
+                        <label>Enter Message</label>
+                        <textarea class="form-control" id="message"></textarea>
+                        <br />
+                        <input type="submit" class="btn btn-primary" value="Send Message" />
+                    </div>
+                </form>
+            </div>
+            <div id="roomsContainer" class="col-md-2">
+                <div class="well">
+                    <h4>Chat Rooms</h4>
+                    <ul class="list-group" id="rooms">
+
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        $(() => {
+            const socket = io.connect();
+            const $messageForm = $('#messageForm');
+            const $message = $('#message');
+            const $chat = $('#chat');
+            const $userForm = $('#userForm');
+            const $userFormArea = $('#userFormArea');
+            const $messageArea = $('#messageArea');
+            const $users = $('#users');
+            const $username = $('#username');
+
+
+
+            $messageForm.submit(e => {
+                e.preventDefault();
+                socket.emit('send message', $message.val());
+                $message.val('');
+            });
+
+            socket.on('new message(1)', data => {
+                $chat.append(`<div class="well"><strong>${data.user}</strong>: ${data.msg}</div>`);
+            });
+
+            socket.on('new message(2)', data => {
+                $chat.append(`<div class="well">${data.msg}</div>`);
+            });
+
+            $userForm.submit(e => {
+                e.preventDefault();
+                socket.emit('new user', $username.val(), data => {
+                    if (data) {
+                        $userFormArea.hide();
+                        $messageArea.show();
+                    }
+                });
+                $username.val('');
+
+            });
+
+            socket.on('get users', data => {
+                let html = '';
+                for (let i = 0; i < data.length; i++) {
+                    html += `<li class="list-group-item">${data[i]}</li>`
+                }
+                $users.html(html);
+            })
+
+            socket.on('updaterooms', function (rooms, current_room) {
+                $('#rooms').empty();
+                $.each(rooms, function (key, value) {
+                    if (value == current_room) {
+                        $('#rooms').append(`<li class= "rooms">${value}</li>`);
+                    }
+                    else {
+                        $('#rooms').append(`<li style="cursor:pointer" class=null>${value}</li>`);
+
+                    }
+
+
+                });
+
+            });
+        
+
+            $('#rooms').on('click', 'li', function (event) {
+                event.preventDefault();
+                switchRoom(event.currentTarget.innerHTML)
+            });
+
+
+            function switchRoom(room) {
+                socket.emit('switchRoom', room);
+            }
+        });
+
+
+    </script>
+</body>
+
+</html>
